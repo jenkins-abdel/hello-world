@@ -1,30 +1,29 @@
 pipeline {
     agent any
-  tools {
+
+    tools {
         maven "Maven 3.6.3"
     }
-  options {
-        parallelsAlwaysFailFast()
-    }
+
     stages {
-        stage('Hello-world maven') {
+        stage('Hello-world Maven') {
             steps {
-                git 'https://github.com/crunchy-devops/hello-world.git'
-                sh "mvn clean install package"
+                git 'https://github.com/jenkins-abdel/hello-world.git'
+                sh " mvn clean install package"
                 archiveArtifacts artifacts: '**/*.war', followSymlinks: false
             }
         }
-        stage('Hello-world sonar') {
+        stage('Hello-world Sonar') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                sh "mvn  clean package sonar:sonar -Dsonar.host_url=$SONAR_HOST_URL "
+                    sh "mvn  clean package sonar:sonar -Dsonar.host_url=$SONAR_HOST_URL"
                 }
             }
         }
         stage('Hello-world Nexus') {
             steps {
                 nexusPublisher nexusInstanceId: 'Nexus', nexusRepositoryId: 'maven-releases', packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: '', filePath: 'webapp/target/webapp.war']], mavenCoordinate: [artifactId: 'maven-project', groupId: 'com.example.maven-project', packaging: 'war', version: '1.1']]]
-                }
+            }
         }
         stage('Hello-world Docker build') {
             steps {
@@ -33,7 +32,7 @@ pipeline {
                      docker build -t hello-world-afip:latest ."
                 }
         }
-        stage('Hello-world Docker Test') {
+        stage('Hello-world Docker run') {
             steps {
                 script {
                 def set_container = sh(script: ''' CONTAINER_NAME="hello-world-test"
@@ -46,22 +45,5 @@ pipeline {
                 }
             }
         }
-        stage('Parallel Stage') {
-            parallel {
-                stage('Hello-world jmeter') {
-                    steps {
-                        sh "jmeter -Jjmeter.save.saveservice.output_format=xml -Jjmeter.save.saveservice.response_data.on_error=true -n -t jmeter_test_plan.jmx  -l testresult.jlt"
-                    }
-                }
-                stage('Hello-world Selenium') {
-                steps {
-                        git 'https://github.com/crunchy-devops/hello-world.git'
-                        sh "mvn test"
-                    }
-                }
-
-            }
-        }
-
     }
 }
